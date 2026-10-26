@@ -25,13 +25,20 @@ jobs:
           mkdir -p app/src/main/java/com/example/expense
           mkdir -p app/src/main/res/values
 
-          # 2. Settings.gradle define karein
+          # 2. gradle.properties (AndroidX enable karna zaroori hai)
+          cat << 'EOF' > gradle.properties
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          EOF
+
+          # 3. Settings.gradle define karein
           cat << 'EOF' > settings.gradle
           rootProject.name = "ExpenseManager"
           include ':app'
           EOF
 
-          # 3. Root build.gradle
+          # 4. Root build.gradle
           cat << 'EOF' > build.gradle
           buildscript {
               repositories {
@@ -50,7 +57,7 @@ jobs:
           }
           EOF
 
-          # 4. App-level build.gradle
+          # 5. App-level build.gradle
           cat << 'EOF' > app/build.gradle
           apply plugin: 'com.android.application'
 
@@ -77,14 +84,14 @@ jobs:
           }
           EOF
 
-          # 5. Required dummy resources (AAPT2 crash rokne ke liye)
+          # 6. Required dummy resources (AAPT2 crash rokne ke liye)
           cat << 'EOF' > app/src/main/res/values/strings.xml
           <resources>
               <string name="app_name">Vault Flow</string>
           </resources>
           EOF
 
-          # 6. AndroidManifest.xml
+          # 7. AndroidManifest.xml
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -103,7 +110,7 @@ jobs:
           </manifest>
           EOF
 
-          # 7. Check agar MainActivity exist karti hai toh usko sahi jagah move karo
+          # 8. Check agar MainActivity exist karti hai toh sahi jagah move karo
           if [ -f "src/main/java/com/example/expense/MainActivity.java" ]; then
               cp src/main/java/com/example/expense/MainActivity.java app/src/main/java/com/example/expense/
           elif [ -f "MainActivity.java" ]; then
