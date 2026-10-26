@@ -1,4 +1,4 @@
-name: Build Android Java APK
+name: Robust Android APK Builder
 
 on:
   push:
@@ -19,16 +19,107 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup and Execute Gradle
+      - name: Auto-Scaffold Clean Android Structure
+        run: |
+          # 1. Standard directories create karein
+          mkdir -p app/src/main/java/com/example/expense
+          mkdir -p app/src/main/res/values
+
+          # 2. Settings.gradle define karein
+          cat << 'EOF' > settings.gradle
+          rootProject.name = "ExpenseManager"
+          include ':app'
+          EOF
+
+          # 3. Root build.gradle
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          # 4. App-level build.gradle
+          cat << 'EOF' > app/build.gradle
+          apply plugin: 'com.android.application'
+
+          android {
+              namespace 'com.example.expense'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.example.expense"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          EOF
+
+          # 5. Required dummy resources (AAPT2 crash rokne ke liye)
+          cat << 'EOF' > app/src/main/res/values/strings.xml
+          <resources>
+              <string name="app_name">Vault Flow</string>
+          </resources>
+          EOF
+
+          # 6. AndroidManifest.xml
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:label="@string/app_name"
+                  android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # 7. Check agar MainActivity exist karti hai toh usko sahi jagah move karo
+          if [ -f "src/main/java/com/example/expense/MainActivity.java" ]; then
+              cp src/main/java/com/example/expense/MainActivity.java app/src/main/java/com/example/expense/
+          elif [ -f "MainActivity.java" ]; then
+              cp MainActivity.java app/src/main/java/com/example/expense/
+          fi
+
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.5'
 
-      - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace
+      - name: Compile and Assemble APK
+        run: gradle :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ExpenseManager-APK
-          path: "**/build/outputs/apk/debug/*.apk"
+          path: app/build/outputs/apk/debug/*.apk
